@@ -2,7 +2,7 @@ name: Android Debug APK
 
 on:
   push:
-    branches: [main, app-1.2.4]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
