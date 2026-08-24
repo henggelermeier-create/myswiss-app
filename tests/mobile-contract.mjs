@@ -15,9 +15,12 @@ const scanner = read("mobile/src/components/QrScanBox.tsx");
 const portal = read("mobile/src/lib/portal-client.ts");
 const secure = read("mobile/src/lib/secure-store.ts");
 const deep = read("mobile/src/lib/deep-link.ts");
+const version = read("mobile/src/version.ts");
 const workflow = read(".github/workflows/android-debug.yml");
 
 assert.match(cap, /webDir:\s*["']mobile\/dist["']/);
+assert.match(cap, /appId:\s*["']com\.schiessportal\.mobile\.v122["']/);
+assert.match(cap, /appName:\s*["']Schiessportal 1\.2\.2["']/);
 assert.doesNotMatch(cap, /server:\s*\{[^}]*url:/s, "App darf nicht nur eine Remote-Webseite laden");
 assert.match(manifest, /android\.permission\.INTERNET/);
 assert.match(manifest, /android\.permission\.CAMERA/);
@@ -29,12 +32,17 @@ assert.ok(pkg.dependencies["@capacitor-mlkit/barcode-scanning"], "QR-Scanner feh
 assert.ok(pkg.dependencies["capacitor-secure-storage-plugin"], "Secure Storage fehlt");
 assert.ok(pkg.dependencies["@capacitor/network"], "Network Plugin fehlt");
 assert.ok(pkg.dependencies["@capacitor/preferences"], "Preferences Plugin fehlt");
+assert.equal(pkg.version, "1.2.2");
+assert.match(version, /1\.2\.2/);
 
 assert.match(portal, /https:\/\/schiessportal\.com/);
 assert.match(portal, /isPortalReachable/);
 assert.match(app, /discoverBox/);
 assert.match(app, /runCourier/);
 assert.match(app, /runInternetBridge/);
+assert.match(app, /Box neu koppeln/);
+assert.match(app, /appSessionStore\.clear/);
+assert.match(app, /boxPairingStore\.clear/);
 assert.match(secure, /sessionStorage/);
 assert.match(secure, /capacitor-secure-storage-plugin/);
 assert.match(deep.replaceAll("\\/", "/"), /schiessportal:\/\/box\//);
@@ -42,6 +50,8 @@ assert.match(deep.replaceAll("\\/", "/"), /schiessportal:\/\/box\//);
 assert.match(pairingGate, /redeemBoxQr/);
 assert.match(pairingGate, /appSessionStore\.save/);
 assert.match(pairingGate, /boxPairingStore\.save/);
+assert.match(pairingGate, /appSessionStore\.clear/);
+assert.match(pairingGate, /boxPairingStore\.clear/);
 assert.doesNotMatch(pairingGate, /token:\s*["']manuell["']/i, "Ungültige Fake-Kopplung darf nicht gespeichert werden");
 assert.match(pairingGate, /Code prüfen und Box koppeln/);
 assert.match(scanner, /isGoogleBarcodeScannerModuleAvailable/);
@@ -64,4 +74,4 @@ for (const file of walk(new URL(".", root).pathname)) {
   assert.doesNotMatch(file, forbidden, `Sensitive filename found: ${file}`);
 }
 
-console.log("Mobile contract verified: pairing, QR scanner, secure storage, local box, portal reachability and deep links.");
+console.log("Mobile contract verified: 1.2.2 pairing, reset, QR scanner, secure storage, local box, portal reachability and deep links.");
