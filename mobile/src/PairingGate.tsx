@@ -48,10 +48,21 @@ export function PairingGate() {
     setError(null);
     try {
       const session = await redeemBoxQr(token);
-      if (!session.token || !session.expires_at) throw new Error("Das Portal hat keine gültige App-Sitzung geliefert.");
+      if (!session.token || !session.expires_at) {
+        throw new Error("Das Portal hat keine gültige App-Sitzung geliefert.");
+      }
+
+      // Die echte App-Session ist entscheidend. Sobald sie sicher gespeichert ist,
+      // darf ein langsames Android-Preferences-Plugin die erfolgreiche Kopplung
+      // nicht mehr blockieren.
       await appSessionStore.save({ token: session.token, expires_at: session.expires_at });
-      await boxPairingStore.save({ token, box_id: session.device_id, club_id: null });
       setPaired(true);
+      setChecking(false);
+
+      // Box-Metadaten sind nur lokaler Komfort. Best effort und nie blockierend.
+      void boxPairingStore
+        .save({ token, box_id: session.device_id, club_id: null })
+        .catch(() => undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Box konnte nicht gekoppelt werden.");
     } finally {
@@ -86,7 +97,9 @@ export function PairingGate() {
           if (link) await pair(link.token);
         }
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Startprüfung konnte nicht abgeschlossen werden.");
+        if (active) {
+          setError(err instanceof Error ? err.message : "Startprüfung konnte nicht abgeschlossen werden.");
+        }
       } finally {
         window.clearTimeout(safety);
         if (active) setChecking(false);
@@ -96,7 +109,9 @@ export function PairingGate() {
     void CapApp.addListener("appUrlOpen", ({ url }) => {
       const link = parseBoxPairingUrl(url);
       if (link) void pair(link.token);
-    }).then((handle) => { urlHandle = handle; });
+    }).then((handle) => {
+      urlHandle = handle;
+    });
 
     return () => {
       active = false;
@@ -150,7 +165,11 @@ export function PairingGate() {
           value={manualCode}
           onChange={(event) => setManualCode(event.target.value)}
         />
-        <button className="btn-primary" disabled={busy || !manualCode.trim()} onClick={() => void pair(manualCode)}>
+        <button
+          className="btn-primary"
+          disabled={busy || !manualCode.trim()}
+          onClick={() => void pair(manualCode)}
+        >
           {busy ? "Box wird gekoppelt …" : "Code prüfen und Box koppeln"}
         </button>
       </section>
