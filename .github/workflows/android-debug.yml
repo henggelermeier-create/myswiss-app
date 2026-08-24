@@ -51,13 +51,9 @@ jobs:
       - name: Capacitor Android synchronisieren
         run: npx cap sync android
 
-      - name: Gradle Wrapper erzeugen
-        working-directory: android
-        run: gradle wrapper --gradle-version 8.14.3 --distribution-type bin
-
       - name: Debug-APK bauen
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
 
       - name: APK hochladen
         uses: actions/upload-artifact@v4
