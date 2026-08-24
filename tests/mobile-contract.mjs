@@ -10,9 +10,12 @@ const manifest = read("android/app/src/main/AndroidManifest.xml");
 const network = read("android/app/src/main/res/xml/network_security_config.xml");
 const pkg = JSON.parse(read("package.json"));
 const app = read("mobile/src/App.tsx");
+const pairingGate = read("mobile/src/PairingGate.tsx");
+const scanner = read("mobile/src/components/QrScanBox.tsx");
 const portal = read("mobile/src/lib/portal-client.ts");
 const secure = read("mobile/src/lib/secure-store.ts");
 const deep = read("mobile/src/lib/deep-link.ts");
+const workflow = read(".github/workflows/android-debug.yml");
 
 assert.match(cap, /webDir:\s*["']mobile\/dist["']/);
 assert.doesNotMatch(cap, /server:\s*\{[^}]*url:/s, "App darf nicht nur eine Remote-Webseite laden");
@@ -36,6 +39,19 @@ assert.match(secure, /sessionStorage/);
 assert.match(secure, /capacitor-secure-storage-plugin/);
 assert.match(deep.replaceAll("\\/", "/"), /schiessportal:\/\/box\//);
 
+assert.match(pairingGate, /redeemBoxQr/);
+assert.match(pairingGate, /appSessionStore\.save/);
+assert.match(pairingGate, /boxPairingStore\.save/);
+assert.doesNotMatch(pairingGate, /token:\s*["']manuell["']/i, "Ungültige Fake-Kopplung darf nicht gespeichert werden");
+assert.match(pairingGate, /Code prüfen und Box koppeln/);
+assert.match(scanner, /isGoogleBarcodeScannerModuleAvailable/);
+assert.match(scanner, /installGoogleBarcodeScannerModule/);
+assert.match(scanner, /BarcodeScanner\.scan/);
+assert.match(workflow, /com\.google\.mlkit\.vision\.DEPENDENCIES/);
+assert.match(workflow, /barcode_ui/);
+assert.match(workflow, /android-actions\/setup-android@v4/);
+assert.match(workflow, /actions\/upload-artifact@v6/);
+
 const forbidden = /(?:device_secret|offline[-_]?code(?:s)?|transfer[-_]?key(?:s)?)/i;
 function walk(path) {
   return readdirSync(path, { withFileTypes: true }).flatMap((entry) => {
@@ -45,8 +61,7 @@ function walk(path) {
   });
 }
 for (const file of walk(new URL(".", root).pathname)) {
-  // Source may mention the forbidden concepts in comments/tests, but filenames must never contain them.
   assert.doesNotMatch(file, forbidden, `Sensitive filename found: ${file}`);
 }
 
-console.log("Mobile contract verified: real app, QR, secure storage, local box, portal reachability and deep link.");
+console.log("Mobile contract verified: pairing, QR scanner, secure storage, local box, portal reachability and deep links.");
