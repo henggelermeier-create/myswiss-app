@@ -1,21 +1,18 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: 'com.schiessportal.mobile',
-  appName: 'Schiessportal',
-  webDir: 'dist',
+  appId: "com.schiessportal.mobile",
+  appName: "Schiessportal",
+  webDir: "mobile/dist",
   server: {
-    url: 'https://schiessportal.com',
-    cleartext: true,
+    androidScheme: "https",
+    cleartext: false,
     allowNavigation: [
-      'schiessportal.com',
-      '*.schiessportal.com',
-      'schiessportal.local',
-      'schiessportal.local:8080'
+      "schiessportal.local",
+      "schiessportal-box.local",
+      "192.168.4.1",
+      "schiessportal.com"
     ]
-  },
-  android: {
-    allowMixedContent: true
   }
 };
 

@@ -3,6 +3,7 @@ name: Android Debug APK
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,13 +25,13 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: gradle
 
       - name: Gradle 8.14.3 einrichten
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.14.3'
+          gradle-version: "8.14.3"
 
       - name: Android SDK einrichten
         uses: android-actions/setup-android@v3
@@ -41,16 +42,15 @@ jobs:
       - name: Abhängigkeiten installieren
         run: npm install
 
-      - name: Mobile-Sicherheits- und Integrationsvertrag prüfen
+      - name: Mobile-Vertrag prüfen
         run: npm run test:mobile-contract
 
-      - name: Mobile-Web-App bauen
+      - name: Echte Mobile-App bauen
         run: npm run build
 
       - name: Capacitor Android synchronisieren
         run: npx cap sync android
 
-      # Der Wrapper wird im CI erzeugt, damit keine Binärdatei im Repository liegt.
       - name: Gradle Wrapper erzeugen
         working-directory: android
         run: gradle wrapper --gradle-version 8.14.3 --distribution-type bin
@@ -59,7 +59,7 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug
 
-      - name: Debug-APK als Artefakt hochladen
+      - name: APK hochladen
         uses: actions/upload-artifact@v4
         with:
           name: schiessportal-android-1.2.1
