@@ -10,6 +10,8 @@ type ScanStatus =
   | "scannt"
   | "fehler";
 
+type ScannerApi = typeof import("@capacitor-mlkit/barcode-scanning")["BarcodeScanner"];
+
 export type QrScanBoxProps = {
   onToken: (token: string) => void | Promise<void>;
 };
@@ -22,13 +24,7 @@ async function loadScanner() {
   }
 }
 
-async function waitForGoogleScanner(
-  scanner: Awaited<ReturnType<typeof loadScanner>> extends infer M
-    ? M extends { BarcodeScanner: infer S }
-      ? S
-      : never
-    : never,
-) {
+async function waitForGoogleScanner(scanner: ScannerApi) {
   if (Capacitor.getPlatform() !== "android") return true;
   const current = await scanner.isGoogleBarcodeScannerModuleAvailable();
   if (current.available) return true;
