@@ -21,8 +21,10 @@ const version = read("mobile/src/version.ts");
 const workflow = read(".github/workflows/android-debug.yml");
 
 assert.match(cap, /webDir:\s*["']mobile\/dist["']/);
-assert.match(cap, /appId:\s*["']com\.schiessportal\.mobile\.v123["']/);
-assert.match(cap, /appName:\s*["']Schiessportal 1\.2\.3["']/);
+assert.match(cap, /appId:\s*["']com\.schiessportal\.mobile\.v124["']/);
+assert.match(cap, /appName:\s*["']Schiessportal 1\.2\.4["']/);
+assert.match(cap, /CapacitorHttp/);
+assert.match(cap, /enabled:\s*true/);
 assert.doesNotMatch(cap, /server:\s*\{[^}]*url:/s, "App darf nicht nur eine Remote-Webseite laden");
 assert.match(manifest, /android\.permission\.INTERNET/);
 assert.match(manifest, /android\.permission\.CAMERA/);
@@ -35,11 +37,17 @@ assert.ok(pkg.dependencies["capacitor-secure-storage-plugin"], "Secure Storage f
 assert.ok(pkg.dependencies["@capacitor/network"], "Network Plugin fehlt");
 assert.ok(pkg.dependencies["@capacitor/preferences"], "Preferences Plugin fehlt");
 assert.ok(pkg.dependencies["@capacitor/browser"], "Browser Plugin für Hilfe/Portal fehlt");
-assert.equal(pkg.version, "1.2.3");
-assert.match(version, /1\.2\.3/);
+assert.equal(pkg.version, "1.2.4");
+assert.match(version, /1\.2\.4/);
 
 assert.match(portal, /https:\/\/schiessportal\.com/);
+assert.match(portal, /CapacitorHttp\.request/);
+assert.match(portal, /Capacitor\.isNativePlatform/);
+assert.match(portal, /connectTimeout/);
+assert.match(portal, /redeemBoxQr/);
 assert.match(portal, /isPortalReachable/);
+assert.match(portal, /Schiessportal konnte nicht erreicht werden/);
+
 assert.match(app, /discoverBox/);
 assert.match(app, /runCourier/);
 assert.match(app, /runInternetBridge/);
@@ -61,12 +69,18 @@ assert.match(pairingGate, /Code prüfen und Box koppeln/);
 assert.match(pairingGate, /AppBrand/);
 assert.match(pairingGate, /HelpLinks/);
 
-assert.match(brand, /Schiessportal/);
-assert.match(brand, /SCHIESSPORTAL\.COM/);
-assert.match(help, /https:\/\/schiessportal\.com/);
-assert.match(help, /https:\/\/chatgpt\.com/);
-assert.match(help, /KI-Hilfe öffnen/);
+assert.match(brand, /Die Schweizer Plattform für Schützenvereine/);
+assert.match(brand, /schiessportal\.com/);
+assert.match(brand, /M32 4a28 28 0 0 1 0 56/);
+assert.match(brand, /SCHIESS/);
+assert.match(brand, /PORTAL/);
+
+assert.match(help, /https:\/\/schiessportal\.com\/\?hilfe=ki&quelle=app/);
+assert.match(help, /https:\/\/schiessportal\.com\/kontakt\?quelle=app/);
+assert.match(help, /KI-Hilfe/);
+assert.match(help, /Hilfe &amp; Kontakt/);
 assert.match(help, /Browser\.open/);
+assert.doesNotMatch(help, /chatgpt\.com/i, "KI-Hilfe muss über schiessportal.com laufen");
 
 assert.match(scanner, /isGoogleBarcodeScannerModuleAvailable/);
 assert.match(scanner, /installGoogleBarcodeScannerModule/);
@@ -75,7 +89,10 @@ assert.match(workflow, /com\.google\.mlkit\.vision\.DEPENDENCIES/);
 assert.match(workflow, /barcode_ui/);
 assert.match(workflow, /android-actions\/setup-android@v3/);
 assert.match(workflow, /actions\/upload-artifact@v4/);
-assert.match(workflow, /schiessportal-android-1\.2\.3/);
+assert.match(workflow, /schiessportal-android-1\.2\.4/);
+assert.match(workflow, /com\.schiessportal\.mobile\.v124/);
+assert.match(workflow, /versionName='1\.2\.4'/);
+assert.match(workflow, /schiessportal_logo_foreground\.xml/);
 assert.match(workflow, /aapt.*dump badging/s);
 assert.doesNotMatch(workflow, /storePassword|keyPassword|debugStable|debug-keystore/i, "Keine Signing-Schlüssel oder Passwörter im öffentlichen Workflow");
 
@@ -91,4 +108,4 @@ for (const file of walk(new URL(".", root).pathname)) {
   assert.doesNotMatch(file, forbidden, `Sensitive filename found: ${file}`);
 }
 
-console.log("Mobile contract verified: 1.2.3 startup, pairing, logo, website, AI help, QR scanner, secure storage and Android build checks.");
+console.log("Mobile contract verified: 1.2.4 native portal bridge, exact Schiessportal brand, portal AI help/contact, QR scanner, secure storage and Android build checks.");
