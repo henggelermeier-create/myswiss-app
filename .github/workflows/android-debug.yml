@@ -28,7 +28,9 @@ jobs:
           java-version: "21"
 
       - name: Android SDK einrichten
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ""
 
       - name: Android SDK Platform 36 installieren
         run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
@@ -48,14 +50,14 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Android für Box und Deep Links konfigurieren
+      - name: Android für QR, Box und Deep Links konfigurieren
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
-          p = Path("android/app/src/main/AndroidManifest.xml")
-          s = p.read_text(encoding="utf-8")
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          s = manifest.read_text(encoding="utf-8")
 
           if 'android.permission.CAMERA' not in s:
               s = s.replace(
@@ -69,14 +71,15 @@ jobs:
               raise SystemExit("<application> fehlt im AndroidManifest")
           app_tag = app_match.group(0)
           if 'android:usesCleartextTraffic=' in app_tag:
-              new_tag = re.sub(
-                  r'android:usesCleartextTraffic="[^"]*"',
-                  'android:usesCleartextTraffic="true"',
-                  app_tag,
-              )
+              new_tag = re.sub(r'android:usesCleartextTraffic="[^"]*"', 'android:usesCleartextTraffic="true"', app_tag)
           else:
               new_tag = app_tag[:-1] + ' android:usesCleartextTraffic="true">'
           s = s[:app_match.start()] + new_tag + s[app_match.end():]
+
+          mlkit_meta = '        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />\n'
+          if 'com.google.mlkit.vision.DEPENDENCIES' not in s:
+              app_match = re.search(r'<application\b[^>]*>', s)
+              s = s[:app_match.end()] + '\n' + mlkit_meta + s[app_match.end():]
 
           deep_links = '''
                 <intent-filter>
@@ -95,7 +98,13 @@ jobs:
           if 'android:scheme="schiessportal"' not in s:
               s = s.replace('</activity>', deep_links + '\n        </activity>', 1)
 
-          p.write_text(s, encoding="utf-8")
+          manifest.write_text(s, encoding="utf-8")
+
+          gradle = Path("android/app/build.gradle")
+          g = gradle.read_text(encoding="utf-8")
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 10201', g)
+          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.2.1"', g)
+          gradle.write_text(g, encoding="utf-8")
           PY
 
       - name: Gradle Wrapper prüfen
@@ -112,7 +121,7 @@ jobs:
         run: test -s android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: APK hochladen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: schiessportal-android-1.2.1
           path: android/app/build/outputs/apk/debug/app-debug.apk
