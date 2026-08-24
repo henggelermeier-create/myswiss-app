@@ -19,7 +19,6 @@ const secure = read("mobile/src/lib/secure-store.ts");
 const deep = read("mobile/src/lib/deep-link.ts");
 const version = read("mobile/src/version.ts");
 const workflow = read(".github/workflows/android-debug.yml");
-const debugKey = read(".github/debug-signing/schiessportal-debug-keystore.b64");
 
 assert.match(cap, /webDir:\s*["']mobile\/dist["']/);
 assert.match(cap, /appId:\s*["']com\.schiessportal\.mobile\.v123["']/);
@@ -77,9 +76,8 @@ assert.match(workflow, /barcode_ui/);
 assert.match(workflow, /android-actions\/setup-android@v4/);
 assert.match(workflow, /actions\/upload-artifact@v6/);
 assert.match(workflow, /schiessportal-android-1\.2\.3/);
-assert.match(workflow, /debugStable/);
-assert.match(workflow, /schiessportal-debug-keystore\.b64/);
-assert.ok(debugKey.length > 1000, "Stabile Debug-Signatur fehlt");
+assert.match(workflow, /aapt.*dump badging/s);
+assert.doesNotMatch(workflow, /storePassword|keyPassword|debugStable|debug-keystore/i, "Keine Signing-Schlüssel oder Passwörter im öffentlichen Workflow");
 
 const forbidden = /(?:device_secret|offline[-_]?code(?:s)?|transfer[-_]?key(?:s)?)/i;
 function walk(path) {
@@ -93,4 +91,4 @@ for (const file of walk(new URL(".", root).pathname)) {
   assert.doesNotMatch(file, forbidden, `Sensitive filename found: ${file}`);
 }
 
-console.log("Mobile contract verified: 1.2.3 startup, pairing, logo, website, AI help, QR scanner, secure storage and stable debug signing.");
+console.log("Mobile contract verified: 1.2.3 startup, pairing, logo, website, AI help, QR scanner, secure storage and Android build checks.");
