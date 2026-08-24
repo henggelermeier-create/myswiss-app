@@ -10,6 +10,8 @@ import {
   LocalBoxClient,
   type BoxDiscovery,
 } from "@/lib/local-api";
+import { AppBrand } from "./components/AppBrand";
+import { HelpLinks } from "./components/HelpLinks";
 import { transferReducer, describeTransferState, initialTransferState } from "./lib/transfer-flow";
 import { courierMode, mainActionLabel, runInternetBridge } from "./lib/bridge-courier";
 import {
@@ -184,7 +186,7 @@ export function App() {
   async function resetPairing() {
     setBusy(true);
     try {
-      await Promise.all([appSessionStore.clear(), boxPairingStore.clear()]);
+      await Promise.allSettled([appSessionStore.clear(), boxPairingStore.clear()]);
       window.location.reload();
     } finally {
       setBusy(false);
@@ -192,13 +194,14 @@ export function App() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 p-5">
-      <header className="flex items-center justify-between pt-2">
-        <span className="eyebrow">Meine Box</span>
-        <span className="eyebrow">v{APP_VERSION}</span>
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 p-5">
+      <header className="flex items-center justify-between gap-3 pt-2">
+        <AppBrand compact />
+        <span className="eyebrow whitespace-nowrap">v{APP_VERSION}</span>
       </header>
 
       <section className="panel flex flex-col gap-3 p-6 text-center">
+        <span className="eyebrow">Meine Box</span>
         <h1 className="text-2xl">{title}</h1>
         <p className="text-muted-foreground">{next}</p>
         {!compatible && discovery && <p className="text-sm text-destructive">{LOCAL_API_INCOMPATIBLE_MESSAGE}</p>}
@@ -220,6 +223,8 @@ export function App() {
           onSend={() => void runCourierNow()}
         />
       )}
+
+      <HelpLinks compact />
 
       <button className="text-left text-sm text-muted-foreground underline" onClick={() => setDetailsOpen((v) => !v)}>
         {detailsOpen ? "Details verbergen" : "Details anzeigen"}
