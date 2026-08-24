@@ -106,8 +106,8 @@ jobs:
 
           gradle = Path("android/app/build.gradle")
           gradle_text = gradle.read_text(encoding="utf-8")
-          gradle_text = re.sub(r'versionCode\s+\d+', 'versionCode 10204', gradle_text)
-          gradle_text = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.2.4"', gradle_text)
+          gradle_text = re.sub(r'versionCode\s+\d+', 'versionCode 10205', gradle_text)
+          gradle_text = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.2.5"', gradle_text)
           gradle.write_text(gradle_text, encoding="utf-8")
 
           drawable = Path("android/app/src/main/res/drawable/schiessportal_logo_foreground.xml")
@@ -152,15 +152,15 @@ jobs:
         run: |
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "package: name='com.schiessportal.mobile.v124'"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "versionName='1.2.4'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "package: name='com.schiessportal.mobile.v125'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "versionName='1.2.5'"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" | grep -q "android.permission.CAMERA"
           test -s android/app/src/main/res/drawable/schiessportal_logo_foreground.xml
 
       - name: APK hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: schiessportal-android-1.2.4
+          name: schiessportal-android-1.2.5
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
