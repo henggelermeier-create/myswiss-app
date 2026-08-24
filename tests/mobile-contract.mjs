@@ -34,7 +34,7 @@ assert.match(app, /runCourier/);
 assert.match(app, /runInternetBridge/);
 assert.match(secure, /sessionStorage/);
 assert.match(secure, /capacitor-secure-storage-plugin/);
-assert.match(deep, /schiessportal:\/\/box\//);
+assert.match(deep.replaceAll("\\/", "/"), /schiessportal:\/\/box\//);
 
 const forbidden = /(?:device_secret|offline[-_]?code(?:s)?|transfer[-_]?key(?:s)?)/i;
 function walk(path) {
