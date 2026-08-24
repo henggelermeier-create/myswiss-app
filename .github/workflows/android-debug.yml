@@ -1,0 +1,68 @@
+name: Android Debug APK
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v5
+
+      - name: Node.js 22 einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Java 21 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Gradle 8.14.3 einrichten
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v3
+
+      - name: Android SDK Platform 36 installieren
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Abhängigkeiten installieren
+        run: npm install
+
+      - name: Mobile-Sicherheits- und Integrationsvertrag prüfen
+        run: npm run test:mobile-contract
+
+      - name: Mobile-Web-App bauen
+        run: npm run build
+
+      - name: Capacitor Android synchronisieren
+        run: npx cap sync android
+
+      # Der Wrapper wird im CI erzeugt, damit keine Binärdatei im Repository liegt.
+      - name: Gradle Wrapper erzeugen
+        working-directory: android
+        run: gradle wrapper --gradle-version 8.14.3 --distribution-type bin
+
+      - name: Debug-APK bauen
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Debug-APK als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: schiessportal-android-1.2.1
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

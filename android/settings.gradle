@@ -1,0 +1,11 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'Schiessportal'
+include ':app'
+apply from: 'capacitor.settings.gradle'

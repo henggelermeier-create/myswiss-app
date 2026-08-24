@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.gradle/
+android/.gradle/
+android/local.properties
+android/app/build/
+*.jks
+*.keystore
+.env
+.env.*
+!.env.example
+android/build/
+android/gradle/wrapper/gradle-wrapper.jar
