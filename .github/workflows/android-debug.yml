@@ -102,8 +102,8 @@ jobs:
 
           gradle = Path("android/app/build.gradle")
           g = gradle.read_text(encoding="utf-8")
-          g = re.sub(r'versionCode\s+\d+', 'versionCode 10201', g)
-          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.2.1"', g)
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 10202', g)
+          g = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.2.2"', g)
           gradle.write_text(g, encoding="utf-8")
           PY
 
@@ -118,12 +118,14 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: APK prüfen
-        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          grep -q 'com.schiessportal.mobile.v122' android/app/build.gradle
 
       - name: APK hochladen
         uses: actions/upload-artifact@v6
         with:
-          name: schiessportal-android-1.2.1
+          name: schiessportal-android-1.2.2
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
