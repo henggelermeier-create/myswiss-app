@@ -26,9 +26,36 @@ import { openSystemWifiSettings, type Platform } from "./lib/wifi-settings";
 import { QrScanBox } from "./components/QrScanBox";
 import { APP_VERSION } from "./version";
 
+async function clearPairing() {
+  await Promise.all([boxPairingStore.clear(), appSessionStore.clear()]);
+}
+
+function pairingTokenFromInput(input: string): string {
+  const value = input.trim();
+  if (!value) throw new Error("Bitte QR-Code scannen oder Kopplungscode eingeben.");
+  return parseBoxPairingUrl(value)?.token ?? value;
+}
+
+async function redeemAndPersistPairing(input: string) {
+  const token = pairingTokenFromInput(input);
+  const session = await redeemBoxQr(token);
+  if (!session.token || !session.expires_at) throw new Error("Portal hat keine gültige App-Sitzung geliefert.");
+  await appSessionStore.save({ token: session.token, expires_at: session.expires_at });
+  await boxPairingStore.save({ token, box_id: session.device_id, club_id: null });
+  return session;
+}
+
 function useOnboardingDone() {
   const [done, setDone] = useState<boolean | null>(null);
-  useEffect(() => { boxPairingStore.load().then((p) => setDone(!!p)); }, []);
+  useEffect(() => {
+    void (async () => {
+      const [pairing, session] = await Promise.all([boxPairingStore.load(), appSessionStore.load()]);
+      const expires = session?.expires_at ? Date.parse(session.expires_at) : 0;
+      const valid = Boolean(pairing && session && Number.isFinite(expires) && expires > Date.now());
+      if (!valid) await clearPairing();
+      setDone(valid);
+    })();
+  }, []);
   return done;
 }
 
@@ -45,7 +72,6 @@ export function App() {
   const [portalOk, setPortalOk] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [transfer, setTransfer] = useState(initialTransferState);
-  const [manualCode, setManualCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [bridgeStep, setBridgeStep] = useState<string | null>(null);
@@ -74,10 +100,17 @@ export function App() {
     const resumeSub = CapApp.addListener("resume", () => void redetect());
     const urlSub = CapApp.addListener("appUrlOpen", (e) => {
       const link = parseBoxPairingUrl(e.url);
-      if (link) {
-        void boxPairingStore.save({ token: link.token, box_id: null, club_id: null });
-        setMessage("Box-Verknüpfung empfangen. «Box verbinden» drücken.");
-      }
+      if (!link) return;
+      void redeemAndPersistPairing(link.token)
+        .then(() => window.location.reload())
+        .catch((err) => setMessage(err instanceof Error ? err.message : "Kopplung fehlgeschlagen."));
+    });
+    void CapApp.getLaunchUrl().then((launch) => {
+      const link = parseBoxPairingUrl(launch?.url);
+      if (!link) return;
+      void redeemAndPersistPairing(link.token)
+        .then(() => window.location.reload())
+        .catch((err) => setMessage(err instanceof Error ? err.message : "Kopplung fehlgeschlagen."));
     });
     return () => {
       void netSub.then((h) => h.remove());
@@ -102,7 +135,7 @@ export function App() {
       clearPending: () => pendingUpstreamStore.clear(),
       upload: async (pkg) => {
         const session = await appSessionStore.load();
-        if (!session) throw new Error("Nicht mit dem Portal gekoppelt – QR neu scannen.");
+        if (!session) throw new Error("Nicht mit dem Portal gekoppelt – Box neu koppeln.");
         const res = await receiveUpstreamPackage(session.token, pkg);
         return res.receipt;
       },
@@ -178,8 +211,22 @@ export function App() {
     } finally { setBusy(false); }
   }
 
+  async function resetPairing() {
+    setBusy(true);
+    try {
+      await clearPairing();
+      window.location.reload();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (onboardingDone === null) {
+    return <main className="mx-auto flex min-h-dvh max-w-md items-center justify-center p-6"><p>App wird vorbereitet …</p></main>;
+  }
+
   if (onboardingDone === false) {
-    return <Onboarding onDone={() => window.location.reload()} manualCode={manualCode} setManualCode={setManualCode} />;
+    return <Onboarding onDone={() => window.location.reload()} />;
   }
 
   return (
@@ -194,12 +241,15 @@ export function App() {
       {message && <p className="panel p-4 text-sm">{message}</p>}
       {transfer.step !== "leer" && <TransferCard state={transfer} discovery={discovery} setTransfer={setTransfer} setMessage={setMessage} onSend={() => void runCourierNow()} />}
       <button className="text-left text-sm text-muted-foreground underline" onClick={() => setDetailsOpen((v) => !v)}>{detailsOpen ? "Details verbergen" : "Details anzeigen"}</button>
-      {detailsOpen && <dl className="panel grid grid-cols-2 gap-2 p-4 text-sm">
-        <dt className="text-muted-foreground">Box-Adresse</dt><dd>{discovery?.baseUrl ?? "—"}</dd>
-        <dt className="text-muted-foreground">Box-Version</dt><dd>{discovery?.discovery.agent_version ?? "—"}</dd>
-        <dt className="text-muted-foreground">local_api_version</dt><dd>{discovery?.discovery.local_api_version ?? "—"}</dd>
-        <dt className="text-muted-foreground">App-Version</dt><dd>{APP_VERSION}</dd>
-      </dl>}
+      {detailsOpen && <div className="panel flex flex-col gap-4 p-4">
+        <dl className="grid grid-cols-2 gap-2 text-sm">
+          <dt className="text-muted-foreground">Box-Adresse</dt><dd>{discovery?.baseUrl ?? "—"}</dd>
+          <dt className="text-muted-foreground">Box-Version</dt><dd>{discovery?.discovery.agent_version ?? "—"}</dd>
+          <dt className="text-muted-foreground">local_api_version</dt><dd>{discovery?.discovery.local_api_version ?? "—"}</dd>
+          <dt className="text-muted-foreground">App-Version</dt><dd>{APP_VERSION}</dd>
+        </dl>
+        <button className="btn-secondary" disabled={busy} onClick={() => void resetPairing()}>Box neu koppeln</button>
+      </div>}
     </main>
   );
 }
@@ -228,35 +278,68 @@ function TransferCard({ state, discovery, setTransfer, setMessage, onSend }: {
   return <section className="panel flex flex-col gap-3 p-5"><p className="font-semibold">{title}</p>{action && <button className="btn-secondary" onClick={onAction}>{action}</button>}</section>;
 }
 
-function Onboarding({ onDone, manualCode, setManualCode }: { onDone: () => void; manualCode: string; setManualCode: (v: string) => void; }) {
-  const [step, setStep] = useState(0); const [saving, setSaving] = useState(false);
+function Onboarding({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0);
+  const [manualCode, setManualCode] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [pairError, setPairError] = useState<string | null>(null);
+
   const steps = [
-    { title: "QR scannen", text: "Scannen Sie den QR-Code am Aufkleber der Box. Er koppelt Handy und Box – er ist kein Passwort." },
-    { title: "Box verbinden", text: "Die App verbindet sich automatisch mit der Box in Reichweite." },
-    { title: "Offline-Zugang verwenden", text: "Der QR-Code verbindet nur Handy und Box. Zum Arbeiten an der Box brauchen Sie zusätzlich den Offline-Zugang aus dem Portal (Benutzername «verein» und der dort erzeugte Code) – das ist nicht der Box-Code." },
-    { title: "Fertig", text: "Sie können jetzt jederzeit offline weiterarbeiten." },
+    { title: "Box koppeln", text: "QR-Code aus dem Portal scannen oder den Kopplungscode direkt eingeben. Die App prüft den Code sofort." },
+    { title: "Box verbinden", text: "Im Schützenhaus verbindet sich das Handy mit der Box. Falls nötig öffnet «Box verbinden» die WLAN-Einstellungen." },
+    { title: "Offline-Zugang verwenden", text: "Zum Arbeiten an der Box verwenden Sie zusätzlich Benutzername «verein» und den separaten Offline-Code aus dem Portal." },
+    { title: "Fertig", text: "Die App ist gekoppelt. Sie können Daten zwischen Box und Portal übertragen." },
   ];
   const current = steps[step]!;
+
+  async function pairNow(input: string) {
+    setSaving(true);
+    setPairError(null);
+    try {
+      await redeemAndPersistPairing(input);
+      setStep(1);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Kopplung fehlgeschlagen.";
+      setPairError(message);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-between gap-6 p-6">
     <div />
     <section className="flex flex-col items-center gap-4 text-center">
-      <span className="eyebrow">Schritt {step + 1} von {steps.length}</span><h1 className="text-2xl">{current.title}</h1><p className="text-muted-foreground">{current.text}</p>
+      <span className="eyebrow">Schritt {step + 1} von {steps.length}</span>
+      <h1 className="text-2xl">{current.title}</h1>
+      <p className="text-muted-foreground">{current.text}</p>
       {step === 0 && <div className="flex w-full flex-col gap-3">
-        <QrScanBox onToken={(token) => { setManualCode(token); setStep(1); }} />
-        <div className="panel flex w-full flex-col gap-2 p-4 text-left"><p className="text-sm text-muted-foreground">Kein Scanner zur Hand? Code manuell eingeben:</p><input className="panel px-3 py-2" placeholder="Box-Code vom Aufkleber (kein Passwort)" value={manualCode} onChange={(e) => setManualCode(e.target.value)} /></div>
+        <QrScanBox onToken={pairNow} />
+        <div className="panel flex w-full flex-col gap-3 p-4 text-left">
+          <p className="text-sm text-muted-foreground">Ohne Kamera: Kopplungscode oder vollständigen Schiessportal-Link eingeben.</p>
+          <input
+            className="panel px-3 py-2"
+            placeholder="Kopplungscode"
+            autoCapitalize="none"
+            autoCorrect="off"
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+          />
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={saving || !manualCode.trim()}
+            onClick={() => void pairNow(manualCode).catch(() => undefined)}
+          >
+            {saving ? "Code wird geprüft …" : "Code prüfen & koppeln"}
+          </button>
+          {pairError && <p className="text-sm text-destructive">{pairError}</p>}
+        </div>
       </div>}
     </section>
-    <button className="btn-primary" disabled={saving} onClick={async () => {
-      if (step < steps.length - 1) { setStep(step + 1); return; }
-      setSaving(true); const token = manualCode.trim();
-      try {
-        if (token && token !== "manuell") {
-          const session = await redeemBoxQr(token);
-          await appSessionStore.save({ token: session.token, expires_at: session.expires_at });
-          await boxPairingStore.save({ token, box_id: session.device_id, club_id: null });
-        } else await boxPairingStore.save({ token: "manuell", box_id: null, club_id: null });
-      } catch { await boxPairingStore.save({ token: token || "manuell", box_id: null, club_id: null }); }
-      finally { setSaving(false); onDone(); }
-    }}>{step < steps.length - 1 ? "Weiter" : saving ? "Verbinde …" : "Los geht's"}</button>
+    {step > 0 && <button className="btn-primary" disabled={saving} onClick={() => {
+      if (step < steps.length - 1) setStep(step + 1);
+      else onDone();
+    }}>{step < steps.length - 1 ? "Weiter" : "Los geht's"}</button>}
   </main>;
 }
