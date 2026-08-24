@@ -1,7 +1,7 @@
 import { Browser } from "@capacitor/browser";
 
-const WEBSITE_URL = "https://schiessportal.com";
-const AI_HELP_URL = "https://chatgpt.com/";
+const AI_HELP_URL = "https://schiessportal.com/?hilfe=ki&quelle=app";
+const CONTACT_URL = "https://schiessportal.com/kontakt?quelle=app";
 
 async function openUrl(url: string) {
   try {
@@ -13,21 +13,21 @@ async function openUrl(url: string) {
 
 export function HelpLinks({ compact = false }: { compact?: boolean }) {
   return (
-    <section className={`panel flex flex-col ${compact ? "gap-2 p-3" : "gap-3 p-4"}`}>
-      <div>
-        <p className="font-semibold">Hilfe</p>
-        {!compact && (
+    <section className={`panel flex flex-col ${compact ? "gap-2.5 p-3" : "gap-3 p-4"}`}>
+      {!compact && (
+        <div>
+          <p className="font-semibold">Hilfe von Schiessportal</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Portal öffnen oder für Fragen die Online-KI-Hilfe verwenden. Für die KI-Hilfe ist Internet erforderlich.
+            KI-Hilfe und persönlicher Kontakt laufen über schiessportal.com. So bleibt die App bewusst einfach.
           </p>
-        )}
-      </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <button type="button" className="btn-secondary" onClick={() => void openUrl(WEBSITE_URL)}>
-          schiessportal.com öffnen
-        </button>
         <button type="button" className="btn-secondary" onClick={() => void openUrl(AI_HELP_URL)}>
-          KI-Hilfe öffnen
+          KI-Hilfe
+        </button>
+        <button type="button" className="btn-secondary" onClick={() => void openUrl(CONTACT_URL)}>
+          Hilfe &amp; Kontakt
         </button>
       </div>
     </section>
