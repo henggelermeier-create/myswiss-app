@@ -56,8 +56,8 @@ export const secureStore = {
     }
     try {
       await withTimeout(api.set({ key, value }));
-    } catch (error) {
-      throw new Error("Sicherer Speicher reagiert nicht. App bitte nochmals öffnen und erneut koppeln.", { cause: error });
+    } catch {
+      throw new Error("Sicherer Speicher reagiert nicht. App bitte nochmals öffnen und erneut koppeln.");
     }
   },
 
