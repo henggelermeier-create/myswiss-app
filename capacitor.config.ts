@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.schiessportal.mobile.v123",
-  appName: "Schiessportal 1.2.3",
+  appId: "com.schiessportal.mobile.v124",
+  appName: "Schiessportal 1.2.4",
   webDir: "mobile/dist",
   server: {
     androidScheme: "https",
@@ -11,9 +11,14 @@ const config: CapacitorConfig = {
       "schiessportal.local",
       "schiessportal-box.local",
       "192.168.4.1",
-      "schiessportal.com"
-    ]
-  }
+      "schiessportal.com",
+    ],
+  },
+  plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
 };
 
 export default config;
