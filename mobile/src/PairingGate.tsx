@@ -5,6 +5,7 @@ import { QrScanBox } from "./components/QrScanBox";
 import { parseBoxPairingUrl } from "./lib/deep-link";
 import { redeemBoxQr } from "./lib/portal-client";
 import { appSessionStore, boxPairingStore } from "./lib/transfer-storage";
+import { APP_VERSION } from "./version";
 
 function extractToken(input: string): string {
   const value = input.trim();
@@ -24,7 +25,6 @@ export function PairingGate() {
   const [manualCode, setManualCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   async function pair(raw: string) {
     const token = extractToken(raw);
@@ -35,13 +35,11 @@ export function PairingGate() {
 
     setBusy(true);
     setError(null);
-    setSuccess(null);
     try {
       const session = await redeemBoxQr(token);
       if (!session.token || !session.expires_at) throw new Error("Das Portal hat keine gültige App-Sitzung geliefert.");
       await appSessionStore.save({ token: session.token, expires_at: session.expires_at });
       await boxPairingStore.save({ token, box_id: session.device_id, club_id: null });
-      setSuccess(`Box gekoppelt${session.club_name ? ` – ${session.club_name}` : ""}.`);
       setPaired(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Box konnte nicht gekoppelt werden.");
@@ -92,7 +90,7 @@ export function PairingGate() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 p-6">
       <header className="pt-4 text-center">
-        <span className="eyebrow">Schiessportal App</span>
+        <span className="eyebrow">Schiessportal App · v{APP_VERSION}</span>
         <h1 className="mt-3 text-2xl">Box koppeln</h1>
         <p className="mt-2 text-muted-foreground">
           Im Portal bei deiner Box «QR neu ausstellen» drücken und den angezeigten QR-Code hier scannen.
@@ -123,7 +121,6 @@ export function PairingGate() {
       </section>
 
       {error && <p className="panel p-4 text-sm text-destructive">{error}</p>}
-      {success && <p className="panel p-4 text-sm">{success}</p>}
     </main>
   );
 }
