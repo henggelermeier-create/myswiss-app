@@ -16,13 +16,14 @@ const help = read("mobile/src/components/HelpLinks.tsx");
 const scanner = read("mobile/src/components/QrScanBox.tsx");
 const portal = read("mobile/src/lib/portal-client.ts");
 const secure = read("mobile/src/lib/secure-store.ts");
+const storage = read("mobile/src/lib/transfer-storage.ts");
 const deep = read("mobile/src/lib/deep-link.ts");
 const version = read("mobile/src/version.ts");
 const workflow = read(".github/workflows/android-debug.yml");
 
 assert.match(cap, /webDir:\s*["']mobile\/dist["']/);
-assert.match(cap, /appId:\s*["']com\.schiessportal\.mobile\.v124["']/);
-assert.match(cap, /appName:\s*["']Schiessportal 1\.2\.4["']/);
+assert.match(cap, /appId:\s*["']com\.schiessportal\.mobile\.v125["']/);
+assert.match(cap, /appName:\s*["']Schiessportal 1\.2\.5["']/);
 assert.match(cap, /CapacitorHttp/);
 assert.match(cap, /enabled:\s*true/);
 assert.doesNotMatch(cap, /server:\s*\{[^}]*url:/s, "App darf nicht nur eine Remote-Webseite laden");
@@ -37,8 +38,8 @@ assert.ok(pkg.dependencies["capacitor-secure-storage-plugin"], "Secure Storage f
 assert.ok(pkg.dependencies["@capacitor/network"], "Network Plugin fehlt");
 assert.ok(pkg.dependencies["@capacitor/preferences"], "Preferences Plugin fehlt");
 assert.ok(pkg.dependencies["@capacitor/browser"], "Browser Plugin für Hilfe/Portal fehlt");
-assert.equal(pkg.version, "1.2.4");
-assert.match(version, /1\.2\.4/);
+assert.equal(pkg.version, "1.2.5");
+assert.match(version, /1\.2\.5/);
 
 assert.match(portal, /https:\/\/schiessportal\.com/);
 assert.match(portal, /CapacitorHttp\.request/);
@@ -57,13 +58,20 @@ assert.match(app, /HelpLinks/);
 assert.match(secure, /SECURE_TIMEOUT_MS/);
 assert.match(secure, /withTimeout/);
 assert.match(secure, /capacitor-secure-storage-plugin/);
+assert.match(storage, /PREFERENCES_TIMEOUT_MS/);
+assert.match(storage, /withPreferencesTimeout/);
+assert.match(storage, /Preferences\.get/);
+assert.match(storage, /Preferences\.set/);
 assert.match(deep.replaceAll("\\/", "/"), /schiessportal:\/\/box\//);
 
 assert.match(pairingGate, /STARTUP_SAFETY_MS/);
 assert.match(pairingGate, /setChecking\(false\)/);
 assert.match(pairingGate, /redeemBoxQr/);
 assert.match(pairingGate, /appSessionStore\.save/);
-assert.match(pairingGate, /boxPairingStore\.save/);
+assert.match(pairingGate, /setPaired\(true\)/);
+assert.match(pairingGate, /void boxPairingStore/);
+assert.match(pairingGate, /\.catch\(\(\) => undefined\)/);
+assert.doesNotMatch(pairingGate, /await\s+boxPairingStore\.save/, "Zusatzdaten dürfen erfolgreiche Kopplung nicht blockieren");
 assert.doesNotMatch(pairingGate, /token:\s*["']manuell["']/i, "Ungültige Fake-Kopplung darf nicht gespeichert werden");
 assert.match(pairingGate, /Code prüfen und Box koppeln/);
 assert.match(pairingGate, /AppBrand/);
@@ -89,9 +97,9 @@ assert.match(workflow, /com\.google\.mlkit\.vision\.DEPENDENCIES/);
 assert.match(workflow, /barcode_ui/);
 assert.match(workflow, /android-actions\/setup-android@v3/);
 assert.match(workflow, /actions\/upload-artifact@v4/);
-assert.match(workflow, /schiessportal-android-1\.2\.4/);
-assert.match(workflow, /com\.schiessportal\.mobile\.v124/);
-assert.match(workflow, /versionName='1\.2\.4'/);
+assert.match(workflow, /schiessportal-android-1\.2\.5/);
+assert.match(workflow, /com\.schiessportal\.mobile\.v125/);
+assert.match(workflow, /versionName='1\.2\.5'/);
 assert.match(workflow, /schiessportal_logo_foreground\.xml/);
 assert.match(workflow, /aapt.*dump badging/s);
 assert.doesNotMatch(workflow, /storePassword|keyPassword|debugStable|debug-keystore/i, "Keine Signing-Schlüssel oder Passwörter im öffentlichen Workflow");
@@ -108,4 +116,4 @@ for (const file of walk(new URL(".", root).pathname)) {
   assert.doesNotMatch(file, forbidden, `Sensitive filename found: ${file}`);
 }
 
-console.log("Mobile contract verified: 1.2.4 native portal bridge, exact Schiessportal brand, portal AI help/contact, QR scanner, secure storage and Android build checks.");
+console.log("Mobile contract verified: 1.2.5 non-blocking pairing, native portal bridge, exact Schiessportal brand, portal AI help/contact, QR scanner and storage timeouts.");
