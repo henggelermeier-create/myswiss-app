@@ -49,7 +49,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Android für QR, Box und Deep Links konfigurieren
+      - name: Android für QR, Box, Deep Links und Logo konfigurieren
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -106,9 +106,36 @@ jobs:
 
           gradle = Path("android/app/build.gradle")
           gradle_text = gradle.read_text(encoding="utf-8")
-          gradle_text = re.sub(r'versionCode\s+\d+', 'versionCode 10203', gradle_text)
-          gradle_text = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.2.3"', gradle_text)
+          gradle_text = re.sub(r'versionCode\s+\d+', 'versionCode 10204', gradle_text)
+          gradle_text = re.sub(r'versionName\s+"[^"]+"', 'versionName "1.2.4"', gradle_text)
           gradle.write_text(gradle_text, encoding="utf-8")
+
+          drawable = Path("android/app/src/main/res/drawable/schiessportal_logo_foreground.xml")
+          drawable.parent.mkdir(parents=True, exist_ok=True)
+          drawable.write_text("\n".join([
+              '<?xml version="1.0" encoding="utf-8"?>',
+              '<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="64" android:viewportHeight="64">',
+              '  <path android:pathData="M32,4a28,28 0,0 1,0 56" android:fillColor="@android:color/transparent" android:strokeColor="#1F2937" android:strokeWidth="2.4" android:strokeLineCap="round" />',
+              '  <path android:pathData="M32,4a28,28 0,0 0,0 56" android:fillColor="@android:color/transparent" android:strokeColor="#1F2937" android:strokeWidth="2.4" android:strokeLineCap="round" />',
+              '  <path android:pathData="M32,13a19,19 0,0 1,15.5 30" android:fillColor="@android:color/transparent" android:strokeColor="#1F2937" android:strokeWidth="2.4" android:strokeLineCap="round" />',
+              '  <path android:pathData="M32,51a19,19 0,0 1,-15.5 -8" android:fillColor="@android:color/transparent" android:strokeColor="#1F2937" android:strokeWidth="2.4" android:strokeLineCap="round" />',
+              '  <path android:pathData="M24,32H6M24,32l-6,-6H8" android:fillColor="@android:color/transparent" android:strokeColor="#1F2937" android:strokeWidth="2.4" android:strokeLineCap="round" android:strokeLineJoin="round" />',
+              '  <path android:pathData="M40,32h18M40,32l6,6h10" android:fillColor="@android:color/transparent" android:strokeColor="#DC2626" android:strokeWidth="2.4" android:strokeLineCap="round" android:strokeLineJoin="round" />',
+              '  <path android:pathData="M32,26a6,6 0,1 0,0 12a6,6 0,1 0,0 -12" android:fillColor="#DC2626" />',
+              '</vector>',
+          ]), encoding="utf-8")
+
+          adaptive = "\n".join([
+              '<?xml version="1.0" encoding="utf-8"?>',
+              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">',
+              '  <background android:drawable="@android:color/white" />',
+              '  <foreground android:drawable="@drawable/schiessportal_logo_foreground" />',
+              '</adaptive-icon>',
+          ])
+          for icon_name in ["ic_launcher.xml", "ic_launcher_round.xml"]:
+              icon = Path("android/app/src/main/res/mipmap-anydpi-v26") / icon_name
+              icon.parent.mkdir(parents=True, exist_ok=True)
+              icon.write_text(adaptive, encoding="utf-8")
           PY
 
       - name: Gradle Wrapper prüfen
@@ -125,14 +152,15 @@ jobs:
         run: |
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "package: name='com.schiessportal.mobile.v123'"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "versionName='1.2.3'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "package: name='com.schiessportal.mobile.v124'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "versionName='1.2.4'"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" | grep -q "android.permission.CAMERA"
+          test -s android/app/src/main/res/drawable/schiessportal_logo_foreground.xml
 
       - name: APK hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: schiessportal-android-1.2.3
+          name: schiessportal-android-1.2.4
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
