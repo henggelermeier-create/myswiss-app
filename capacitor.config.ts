@@ -1,8 +1,11 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
+const appId = process.env.SCHIESSPORTAL_APP_ID?.trim() || "com.schiessportal.mobile";
+const appName = process.env.SCHIESSPORTAL_APP_NAME?.trim() || "Schiessportal";
+
 const config: CapacitorConfig = {
-  appId: "com.schiessportal.mobile.v125",
-  appName: "Schiessportal 1.2.5",
+  appId,
+  appName,
   webDir: "mobile/dist",
   server: {
     androidScheme: "https",
