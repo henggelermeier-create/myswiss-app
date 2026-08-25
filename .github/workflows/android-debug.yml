@@ -12,6 +12,9 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      SCHIESSPORTAL_APP_ID: com.schiessportal.mobile.v125
+      SCHIESSPORTAL_APP_NAME: Schiessportal 1.2.5
 
     steps:
       - name: Repository auschecken
