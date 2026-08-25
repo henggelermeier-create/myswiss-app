@@ -19,11 +19,15 @@ const secure = read("mobile/src/lib/secure-store.ts");
 const storage = read("mobile/src/lib/transfer-storage.ts");
 const deep = read("mobile/src/lib/deep-link.ts");
 const version = read("mobile/src/version.ts");
-const workflow = read(".github/workflows/android-debug.yml");
+const debugWorkflow = read(".github/workflows/android-debug.yml");
+const releaseWorkflow = read(".github/workflows/android-release.yml");
+const releaseScript = read("scripts/configure-android-release.mjs");
 
 assert.match(cap, /webDir:\s*["']mobile\/dist["']/);
-assert.match(cap, /appId:\s*["']com\.schiessportal\.mobile\.v125["']/);
-assert.match(cap, /appName:\s*["']Schiessportal 1\.2\.5["']/);
+assert.match(cap, /com\.schiessportal\.mobile/);
+assert.match(cap, /SCHIESSPORTAL_APP_ID/);
+assert.match(cap, /SCHIESSPORTAL_APP_NAME/);
+assert.match(cap, /\|\|\s*["']Schiessportal["']/);
 assert.match(cap, /CapacitorHttp/);
 assert.match(cap, /enabled:\s*true/);
 assert.doesNotMatch(cap, /server:\s*\{[^}]*url:/s, "App darf nicht nur eine Remote-Webseite laden");
@@ -93,16 +97,42 @@ assert.doesNotMatch(help, /chatgpt\.com/i, "KI-Hilfe muss über schiessportal.co
 assert.match(scanner, /isGoogleBarcodeScannerModuleAvailable/);
 assert.match(scanner, /installGoogleBarcodeScannerModule/);
 assert.match(scanner, /BarcodeScanner\.scan/);
-assert.match(workflow, /com\.google\.mlkit\.vision\.DEPENDENCIES/);
-assert.match(workflow, /barcode_ui/);
-assert.match(workflow, /android-actions\/setup-android@v3/);
-assert.match(workflow, /actions\/upload-artifact@v4/);
-assert.match(workflow, /schiessportal-android-1\.2\.5/);
-assert.match(workflow, /com\.schiessportal\.mobile\.v125/);
-assert.match(workflow, /versionName='1\.2\.5'/);
-assert.match(workflow, /schiessportal_logo_foreground\.xml/);
-assert.match(workflow, /aapt.*dump badging/s);
-assert.doesNotMatch(workflow, /storePassword|keyPassword|debugStable|debug-keystore/i, "Keine Signing-Schlüssel oder Passwörter im öffentlichen Workflow");
+
+assert.match(debugWorkflow, /SCHIESSPORTAL_APP_ID:\s*com\.schiessportal\.mobile\.v125/);
+assert.match(debugWorkflow, /SCHIESSPORTAL_APP_NAME:\s*Schiessportal 1\.2\.5/);
+assert.match(debugWorkflow, /com\.google\.mlkit\.vision\.DEPENDENCIES/);
+assert.match(debugWorkflow, /barcode_ui/);
+assert.match(debugWorkflow, /android-actions\/setup-android@v3/);
+assert.match(debugWorkflow, /actions\/upload-artifact@v4/);
+assert.match(debugWorkflow, /schiessportal-android-1\.2\.5/);
+assert.match(debugWorkflow, /com\.schiessportal\.mobile\.v125/);
+assert.match(debugWorkflow, /versionName='1\.2\.5'/);
+assert.match(debugWorkflow, /schiessportal_logo_foreground\.xml/);
+assert.match(debugWorkflow, /aapt.*dump badging/s);
+assert.doesNotMatch(debugWorkflow, /storePassword|keyPassword|debugStable|debug-keystore/i, "Keine Signing-Schlüssel oder Passwörter im Debug-Workflow");
+
+assert.match(releaseWorkflow, /Android Release AAB/);
+assert.match(releaseWorkflow, /bundleRelease/);
+assert.match(releaseWorkflow, /schiessportal-play-release-1\.2\.5/);
+assert.match(releaseWorkflow, /schiessportal-release-UNSIGNED-1\.2\.5/);
+assert.match(releaseWorkflow, /ANDROID_KEYSTORE_BASE64/);
+assert.match(releaseWorkflow, /ANDROID_KEYSTORE_PASSWORD/);
+assert.match(releaseWorkflow, /ANDROID_KEY_ALIAS/);
+assert.match(releaseWorkflow, /ANDROID_KEY_PASSWORD/);
+assert.match(releaseWorkflow, /jarsigner -verify -strict/);
+assert.match(releaseWorkflow, /sha256sum/);
+assert.doesNotMatch(releaseWorkflow, /com\.schiessportal\.mobile\.v125/);
+assert.doesNotMatch(releaseWorkflow, /usesCleartextTraffic=\"true\"/);
+
+assert.match(releaseScript, /VERSION_NAME = "1\.2\.5"/);
+assert.match(releaseScript, /VERSION_CODE = 10205/);
+assert.match(releaseScript, /usesCleartextTraffic=\"false\"/);
+assert.match(releaseScript, /networkSecurityConfig/);
+assert.match(releaseScript, /schiessportal-box\.local/);
+assert.match(releaseScript, /192\.168\.4\.1/);
+assert.match(releaseScript, /signingConfigs/);
+assert.match(releaseScript, /System\.getenv\("ANDROID_KEYSTORE_PASSWORD"\)/);
+assert.doesNotMatch(releaseScript, /storePassword\s+["'][^"']+["']/, "Kein fest codiertes Signierpasswort");
 
 const forbidden = /(?:device_secret|offline[-_]?code(?:s)?|transfer[-_]?key(?:s)?)/i;
 function walk(path) {
@@ -116,4 +146,4 @@ for (const file of walk(new URL(".", root).pathname)) {
   assert.doesNotMatch(file, forbidden, `Sensitive filename found: ${file}`);
 }
 
-console.log("Mobile contract verified: 1.2.5 non-blocking pairing, native portal bridge, exact Schiessportal brand, portal AI help/contact, QR scanner and storage timeouts.");
+console.log("Mobile contract verified: 1.2.5 production identity, Play AAB pipeline, non-blocking pairing, native portal bridge, Schiessportal help/branding and safe release signing contract.");
