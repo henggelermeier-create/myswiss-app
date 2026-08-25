@@ -1,0 +1,125 @@
+name: Android Release AAB
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v5
+
+      - name: Node.js 22 einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Java 21 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v3
+
+      - name: Android SDK Platform 36 installieren
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Abhängigkeiten installieren
+        run: npm install
+
+      - name: Mobile-Vertrag prüfen
+        run: npm run test:mobile-contract
+
+      - name: Produktions-Webapp bauen
+        run: npm run build
+
+      - name: Android-Projekt für Produktion erzeugen
+        run: |
+          rm -rf android
+          npx cap add android
+          npx cap sync android
+
+      - name: Release-Signierung vorbereiten
+        shell: bash
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" && -n "$ANDROID_KEYSTORE_PASSWORD" && -n "$ANDROID_KEY_ALIAS" && -n "$ANDROID_KEY_PASSWORD" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/schiessportal-upload.jks
+            chmod 600 android/app/schiessportal-upload.jks
+            echo "ANDROID_KEYSTORE_FILE=$GITHUB_WORKSPACE/android/app/schiessportal-upload.jks" >> "$GITHUB_ENV"
+            echo "RELEASE_SIGNING_READY=true" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_SIGNING_READY=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Android Release konfigurieren
+        run: node scripts/configure-android-release.mjs
+
+      - name: Produktionskonfiguration prüfen
+        shell: bash
+        run: |
+          grep -q 'applicationId "com.schiessportal.mobile"' android/app/build.gradle
+          grep -q 'versionCode 10205' android/app/build.gradle
+          grep -q 'versionName "1.2.5"' android/app/build.gradle
+          grep -q 'android:usesCleartextTraffic="false"' android/app/src/main/AndroidManifest.xml
+          grep -q 'android:networkSecurityConfig="@xml/network_security_config"' android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.CAMERA' android/app/src/main/AndroidManifest.xml
+          grep -q 'com.google.mlkit.vision.DEPENDENCIES' android/app/src/main/AndroidManifest.xml
+          grep -q 'schiessportal.local' android/app/src/main/res/xml/network_security_config.xml
+          grep -q '192.168.4.1' android/app/src/main/res/xml/network_security_config.xml
+
+      - name: Gradle Wrapper prüfen
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew --version
+
+      - name: Release-AAB bauen
+        working-directory: android
+        run: ./gradlew bundleRelease --stacktrace
+
+      - name: Release-AAB prüfen
+        shell: bash
+        run: |
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$AAB"
+          sha256sum "$AAB" > "$AAB.sha256"
+          if [[ "$RELEASE_SIGNING_READY" == "true" ]]; then
+            jarsigner -verify -strict "$AAB" >/dev/null
+          fi
+
+      - name: Signiertes Play-AAB hochladen
+        if: env.RELEASE_SIGNING_READY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schiessportal-play-release-1.2.5
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/bundle/release/app-release.aab.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Unsigned Release-Prüfbau hochladen
+        if: env.RELEASE_SIGNING_READY != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schiessportal-release-UNSIGNED-1.2.5
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/bundle/release/app-release.aab.sha256
+          if-no-files-found: error
+          retention-days: 14
